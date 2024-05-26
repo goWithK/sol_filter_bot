@@ -6,6 +6,7 @@ import type { ParseModeFlavor } from '@grammyjs/parse-mode';
 import { globalConfig, groupConfig, outConfig } from './src/common/limitsConfig';
 import { BotContext } from './src/types/index';
 import { COMMANDS } from './src/commands/index';
+import { matchingTickers } from './src/common/matchingTickers';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -79,44 +80,73 @@ bot.on(":text", async (ctx) => {
         var isValidLP = false;
         var isValidLPPerc = false;
 
-        const regex = /[+-]?\d+(\.\d+)?/g;
+        // const regex = /[+-]?\d+(\.\d+)?/g;
         const stringList = content.split('\n');
-        console.log('CA: ', stringList[1])
-        stringList.forEach((eachString) => {
-            if (eachString.includes('Started:')) {
-                let LP = parseFloat(String(eachString.match(regex)));
-                console.log('LP: ', LP)
-                if (LP >= minLP) {isValidLP = true}
-                let LPperc = parseInt(String(eachString.split('+')[1].match(regex)));
-                console.log('LP add: ', LPperc)
-                if (LPperc === addLPPerc) {isValidLPPerc = true}
+        // console.log(stringList)
+        // console.log('CA: ', stringList[1])
+        if (!stringList[0].includes('New OpenBook')) {
+            await bot.api.deleteMessage(chatId, messageId)
+            return 
+        }
+
+        for (let i=0; i < stringList.length; i++) {
+            if (!stringList[i].includes('Web')) {
+                continue
             }
-            else if (eachString.includes('Top Holders:')) {
-                let itemIndex = stringList.indexOf(eachString);
-                let stopIndex = stringList.findIndex(function(eachItem) {
-                    if (eachItem.includes('Score: ')) {
-                        return stringList.indexOf(eachItem)
-                    }
-                })
-                for (let i = 0; i < stopIndex - itemIndex - 2; i++) {
-                    let holderPerc = parseFloat(String(stringList[itemIndex + i + 1].split('|')[1].trim().match(regex)))
-                    if (holderPerc >= holderGTE && !stringList[itemIndex + i + 1].includes('Raydium')) {
-                        isValidHolder = true;
-                    }
-                    console.log(stringList[itemIndex + i + 1].split('|')[0], holderPerc)
+            
+            var url = stringList[i].substring(
+                stringList[i].indexOf("/") + 2, 
+                stringList[i].lastIndexOf("/")
+            );
+            const tickerUrls = Object.keys(matchingTickers);
+            if (!tickerUrls.includes(url)) {
+                await bot.api.deleteMessage(chatId, messageId)
+            } else {
+                let ticker = stringList[2].substring(
+                    stringList[2].indexOf("$") + 1, 
+                    stringList[2].lastIndexOf(")")
+                )
+                if (!matchingTickers[url].includes(ticker)) {
+                    await bot.api.deleteMessage(chatId, messageId)
                 }
             }
-        })
-
-        if (isValidHolder && isValidLPPerc && isValidLP) {
-            await bot.api.sendMessage(
-                chatId,
-                content,
-                { parse_mode: "HTML" },
-            );
-        } else {
-            await bot.api.deleteMessage(chatId, messageId)
         }
+
+        // stringList.forEach((eachString) => {
+        //     if (eachString.includes('Started:')) {
+        //         let LP = parseFloat(String(eachString.match(regex)));
+        //         console.log('LP: ', LP)
+        //         if (LP >= minLP) {isValidLP = true}
+        //         let LPperc = parseInt(String(eachString.split('+')[1].match(regex)));
+        //         console.log('LP add: ', LPperc)
+        //         if (LPperc === addLPPerc) {isValidLPPerc = true}
+        //     }
+        //     else if (eachString.includes('Top Holders:')) {
+        //         let itemIndex = stringList.indexOf(eachString);
+        //         let stopIndex = stringList.findIndex(function(eachItem) {
+        //             if (eachItem.includes('Score: ')) {
+        //                 return stringList.indexOf(eachItem)
+        //             }
+        //         })
+        //         for (let i = 0; i < stopIndex - itemIndex - 2; i++) {
+        //             let holderPerc = parseFloat(String(stringList[itemIndex + i + 1].split('|')[1].trim().match(regex)))
+        //             if (holderPerc >= holderGTE && !stringList[itemIndex + i + 1].includes('Raydium')) {
+        //                 isValidHolder = true;
+        //             }
+        //             console.log(stringList[itemIndex + i + 1].split('|')[0], holderPerc)
+        //         }
+        //     }
+        // })
+
+        // if (isValidHolder && isValidLPPerc && isValidLP) {
+        //     await bot.api.sendMessage(
+        //         chatId,
+        //         content,
+        //         { parse_mode: "HTML" },
+        //     );
+        // } else {
+        //     await bot.api.deleteMessage(chatId, messageId)
+        // }
     }
 });
 
