@@ -3,7 +3,7 @@ import { bot } from './bot';
 
 const runBot = () => {
     if (!bot.isInited()) {
-        console.log('BOT NOT INITIATED');
+        console.log('FILTER BOT INITIATED');
         run(bot);
     }
 };
